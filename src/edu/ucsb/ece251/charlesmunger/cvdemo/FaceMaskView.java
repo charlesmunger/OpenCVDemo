@@ -71,6 +71,9 @@ public class FaceMaskView extends JavaCameraView implements CvCameraViewListener
         	Core.circle(mRgba, rightEye, p.width/4, GLASSES_COLOR,4);
 //            Core.rectangle(mRgba, p.tl(), p.br(), GLASSES_COLOR, 3);
         }
+        if(facesArray.length < 1) {
+        	Core.putText(mRgba, getContext().getString(R.string.no_face_found), new Point(mRgba.width()/2, mRgba.height()/2), Core.FONT_HERSHEY_PLAIN, 3, GLASSES_COLOR);
+        }
         return mRgba;
 	}
 	
@@ -85,5 +88,9 @@ public class FaceMaskView extends JavaCameraView implements CvCameraViewListener
 
 	public void setDetector(CascadeClassifier mJavaDetector) {
 		this.mJavaDetector = mJavaDetector;		
+	}
+	
+	public Mat getBuffer() {
+		return this.mRgba;
 	}
 }
