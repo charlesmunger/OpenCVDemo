@@ -2,5 +2,9 @@
 <resources>
 
     <string name="app_name">OpenCV Demo</string>
-
+    <string name="no_face_found">No face found!</string>
+    <string name="menu_save">Take Picture</string>
+    <string name="picture_saved">Picture saved!</string>
+    
+    
 </resources>

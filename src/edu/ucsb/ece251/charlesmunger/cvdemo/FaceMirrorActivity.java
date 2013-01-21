@@ -1,25 +1,33 @@
 package edu.ucsb.ece251.charlesmunger.cvdemo;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
 
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
+import org.opencv.android.Utils;
+import org.opencv.core.Mat;
 import org.opencv.objdetect.CascadeClassifier;
 
 import roboguice.activity.RoboActivity;
 import roboguice.inject.InjectView;
 import android.annotation.TargetApi;
 import android.content.Context;
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.hardware.Camera;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
+import android.provider.MediaStore;
+import android.text.format.DateFormat;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.Toast;
 import edu.ucsb.ece251.charlesmunger.cvdemo.util.SystemUiHider;
 
 /**
@@ -34,7 +42,7 @@ public class FaceMirrorActivity extends RoboActivity {
 	 * The number of milliseconds to wait after
 	 * user interaction before hiding the system UI.
 	 */
-	private static final int AUTO_HIDE_DELAY_MILLIS = 3000;
+	private static final int AUTO_HIDE_DELAY_MILLIS = 5000;
 
 	/**
 	 * If set, will toggle the system UI visibility upon interaction. Otherwise,
@@ -90,13 +98,38 @@ public class FaceMirrorActivity extends RoboActivity {
 	}
 
 	@Override
+	public boolean onCreateOptionsMenu(Menu m) {
+		getMenuInflater().inflate(R.menu.menu_face_mirror, m);
+		return true;
+	}
+	
+	@Override
+	public boolean onOptionsItemSelected(MenuItem m) {
+		switch(m.getItemId()) {
+			case R.id.menu_save: {
+				Mat mat = fullscreenContent.getBuffer();
+				Bitmap bmp = Bitmap.createBitmap(mat.width(), mat.height(), Bitmap.Config.RGB_565);
+				Utils.matToBitmap(mat, bmp);
+				String uri = MediaStore.Images.Media.insertImage(getContentResolver(), bmp,
+						"A gorgeous self portrait " + DateFormat.getDateFormat(getBaseContext()), "not used");
+				Intent intent = new Intent(Camera.ACTION_NEW_PICTURE);
+				intent.setData(new Uri.Builder().path(uri).build());
+				sendBroadcast(intent);
+				Toast.makeText(this, R.string.picture_saved, Toast.LENGTH_SHORT).show();
+				break;
+			}
+		}
+		return true;
+	}
+	
+	@Override
 	protected void onPostCreate(Bundle savedInstanceState) {
 		super.onPostCreate(savedInstanceState);
 
 		// Trigger the initial hide() shortly after the activity has been
 		// created, to briefly hint to the user that UI controls
 		// are available.
-		delayedHide(100);
+		delayedHide(1000);
 	}
 
 	@Override
@@ -115,31 +148,19 @@ public class FaceMirrorActivity extends RoboActivity {
         		if(status == LoaderCallbackInterface.SUCCESS) {
         			Log.i(TAG, "OpenCV loaded successfully");
                     try {
-                        // load cascade file from application resources
-                        InputStream is = getResources().openRawResource(R.raw.lbpcascade_frontalface);
+                    	String path = Utils.exportResource(FaceMirrorActivity.this, R.raw.lbpcascade_frontalface,"cascade");
                         File cascadeDir = getDir("cascade",Context.MODE_PRIVATE);
-                        File mCascadeFile = new File(cascadeDir, "lbpcascade_frontalface.xml");
-                        FileOutputStream os = new FileOutputStream(mCascadeFile);
-                        
-                        byte[] buffer = new byte[4096];
-                        int bytesRead;
-                        while ((bytesRead = is.read(buffer)) != -1) {
-                            os.write(buffer, 0, bytesRead);
-                        }
-                        is.close();
-                        os.close();
-                       // mJavaDetector = RoboGuice.getInjector(getApplicationContext()).getInstance(CascadeClassifier.class);
-                        CascadeClassifier mJavaDetector = new CascadeClassifier(mCascadeFile.getAbsolutePath());
+                        CascadeClassifier mJavaDetector = new CascadeClassifier(path);
                         if (mJavaDetector.empty()) {
                             Log.e(TAG, "Failed to load cascade classifier");
                             mJavaDetector = null;
                         } else {
-                            Log.i(TAG, "Loaded cascade classifier from " + mCascadeFile.getAbsolutePath());
+                            Log.i(TAG, "Loaded cascade classifier from " + path);
                             fullscreenContent.setDetector(mJavaDetector);
                         }
                         cascadeDir.delete();
 
-                    } catch (IOException e) {
+                    } catch (Exception e) {
                         e.printStackTrace();
                         Log.e(TAG, "Failed to load cascade. Exception thrown: " + e);
                     }
