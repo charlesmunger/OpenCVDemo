@@ -99,26 +99,31 @@ public class FaceMirrorActivity extends RoboActivity {
 
 	@Override
 	public boolean onCreateOptionsMenu(Menu m) {
+		super.onCreateOptionsMenu(m);
 		getMenuInflater().inflate(R.menu.menu_face_mirror, m);
 		return true;
 	}
 	
 	@Override
 	public boolean onOptionsItemSelected(MenuItem m) {
+		super.onOptionsItemSelected(m);
 		switch(m.getItemId()) {
-			case R.id.menu_save: {
-				Mat mat = fullscreenContent.getBuffer();
-				Bitmap bmp = Bitmap.createBitmap(mat.width(), mat.height(), Bitmap.Config.RGB_565);
-				Utils.matToBitmap(mat, bmp);
-				String uri = MediaStore.Images.Media.insertImage(getContentResolver(), bmp,
-						"A gorgeous self portrait " + DateFormat.getDateFormat(getBaseContext()), "not used");
-				Intent intent = new Intent(Camera.ACTION_NEW_PICTURE);
-				intent.setData(new Uri.Builder().path(uri).build());
-				sendBroadcast(intent);
-				Toast.makeText(this, R.string.picture_saved, Toast.LENGTH_SHORT).show();
-				break;
-			}
+			case R.id.menu_save: return saveImage();
 		}
+		return false;
+	}
+
+	private boolean saveImage() {
+		Mat mat = fullscreenContent.getBuffer();
+		Bitmap bmp = Bitmap.createBitmap(mat.width(), mat.height(), Bitmap.Config.RGB_565);
+		Utils.matToBitmap(mat, bmp);
+		mat.release();
+		String uri = MediaStore.Images.Media.insertImage(getContentResolver(), bmp,
+				"A gorgeous self portrait " + DateFormat.getDateFormat(getBaseContext()), "not used");
+		Intent intent = new Intent(Camera.ACTION_NEW_PICTURE);
+		intent.setData(new Uri.Builder().path(uri).build());
+		sendBroadcast(intent);
+		Toast.makeText(this, R.string.picture_saved, Toast.LENGTH_SHORT).show();
 		return true;
 	}
 	
