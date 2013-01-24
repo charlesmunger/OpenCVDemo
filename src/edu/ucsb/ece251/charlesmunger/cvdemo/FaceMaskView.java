@@ -16,6 +16,10 @@ import android.content.Context;
 import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
 import android.util.AttributeSet;
+import android.util.Log;
+import android.view.Display;
+import android.view.Surface;
+import android.view.WindowManager;
 
 public class FaceMaskView extends JavaCameraView implements CvCameraViewListener {
     private static final Scalar    GLASSES_COLOR     = new Scalar(0, 255, 0, 255); //green
@@ -25,6 +29,7 @@ public class FaceMaskView extends JavaCameraView implements CvCameraViewListener
 
     private float mRelativeFaceSize   = 0.2f;
     private int mAbsoluteFaceSize   = 0;
+	private Display display = ((WindowManager) getContext().getSystemService(Context.WINDOW_SERVICE)).getDefaultDisplay();
 	
 	public FaceMaskView(Context c, AttributeSet a) {
 		super(c,a);
@@ -36,6 +41,7 @@ public class FaceMaskView extends JavaCameraView implements CvCameraViewListener
 	public void onCameraViewStarted(int width, int height) {
 		mGray = new Mat();
         mRgba = new Mat();
+        
 	}
 
 	@Override
@@ -46,9 +52,15 @@ public class FaceMaskView extends JavaCameraView implements CvCameraViewListener
 
 	@Override
 	public Mat onCameraFrame(Mat inputFrame) {
-		inputFrame.copyTo(mRgba);
-        Imgproc.cvtColor(inputFrame, mGray, Imgproc.COLOR_RGBA2GRAY);
-
+		int flipFlags = 1;
+		if(display.getRotation() == Surface.ROTATION_270) {
+			flipFlags = -1;
+	        Log.i(VIEW_LOG_TAG, "Orientation is" + getRotation());
+		}
+		Core.flip(inputFrame, mRgba, flipFlags);
+		inputFrame.release();
+		//inputFrame.copyTo(mRgba);
+        Imgproc.cvtColor(mRgba, mGray, Imgproc.COLOR_RGBA2GRAY);
         if (mAbsoluteFaceSize == 0) {
             int height = mGray.rows();
             if (Math.round(height * mRelativeFaceSize) > 0) {
@@ -63,13 +75,13 @@ public class FaceMaskView extends JavaCameraView implements CvCameraViewListener
         				mAbsoluteFaceSize, mAbsoluteFaceSize), new Size());
 
         Rect[] facesArray = faces.toArray();
+        faces.release();
         for (int i = 0; i < facesArray.length; i++) {
         	Rect p = facesArray[i];
         	Point leftEye = new Point(p.tl().x+p.width/4, p.tl().y+p.height/4);
         	Point rightEye = new Point(leftEye.x+p.width/2, leftEye.y);
         	Core.circle(mRgba, leftEye, p.width/4, GLASSES_COLOR,4);
         	Core.circle(mRgba, rightEye, p.width/4, GLASSES_COLOR,4);
-//            Core.rectangle(mRgba, p.tl(), p.br(), GLASSES_COLOR, 3);
         }
         if(facesArray.length < 1) {
         	Core.putText(mRgba, getContext().getString(R.string.no_face_found), new Point(mRgba.width()/2, mRgba.height()/2), Core.FONT_HERSHEY_PLAIN, 3, GLASSES_COLOR);
